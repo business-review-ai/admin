@@ -82,7 +82,7 @@ const Dashboard = () => {
   )
 }
 
-const Config = () => {
+const Config = ({ startTour }: any) => {
   const [configs, setConfigs] = useState<any[]>([])
 
 
@@ -117,8 +117,16 @@ const Config = () => {
     <div className="space-y-6 max-w-4xl animate-in fade-in slide-in-from-bottom-4 duration-500">
       <div className="flex items-center justify-between">
         <h1 className="text-3xl font-bold tracking-tight">Global Configuration</h1>
-        <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/20">
-          SuperAdmin Only
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={startTour} 
+            className="px-4 py-2 border border-primary/30 hover:border-primary text-primary hover:bg-primary/10 bg-primary/5 rounded-xl font-bold text-xs transition-all flex items-center justify-center gap-1 shadow-lg shadow-primary/5"
+          >
+            Give me a tour 🚀
+          </button>
+          <div className="p-2 rounded-lg bg-blue-500/10 text-blue-400 text-xs font-bold border border-blue-500/20">
+            SuperAdmin Only
+          </div>
         </div>
       </div>
       
@@ -279,7 +287,7 @@ const Sidebar = () => {
 
   return (
     <aside className="w-72 border-r border-white/5 bg-[#050505] flex flex-col p-8 gap-10">
-      <div className="flex items-center gap-3 px-2">
+      <div id="tour-logo" className="flex items-center gap-3 px-2">
         <div className="w-10 h-10 bg-primary/20 rounded-xl flex items-center justify-center border border-primary/20">
           <Shield className="w-6 h-6 text-primary" />
         </div>
@@ -294,6 +302,7 @@ const Sidebar = () => {
           <Link
             key={item.path}
             to={item.path}
+            id={item.path === '/' ? 'tour-nav-dashboard' : item.path === '/config' ? 'tour-nav-config' : item.path === '/users' ? 'tour-nav-users' : 'tour-nav-enquiries'}
             className={cn(
               "flex items-center gap-3 px-5 py-3.5 rounded-2xl text-sm font-semibold transition-all group",
               location.pathname === item.path 
@@ -308,7 +317,7 @@ const Sidebar = () => {
       </nav>
 
       <div className="space-y-4">
-        <div className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
+        <div id="tour-health" className="p-4 rounded-2xl bg-primary/5 border border-primary/10">
           <p className="text-xs font-bold text-primary uppercase tracking-widest mb-1">System Health</p>
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
@@ -323,10 +332,165 @@ const Sidebar = () => {
   )
 }
 
+// -------------------------------------------------------------------------
+// GUIDED PLATFORM TOUR CONFIGURATION & COMPONENT
+// -------------------------------------------------------------------------
+const tourSteps = [
+  {
+    targetId: "tour-logo",
+    title: "🛡️ Welcome to Geetrix Admin Panel!",
+    content: "This is your admin control panel header. Let's do a quick walk-through of the key sections of your reputation hub!",
+    path: "/"
+  },
+  {
+    targetId: "tour-nav-dashboard",
+    title: "📊 Interactive Analytics Dashboard",
+    content: "Here you can monitor live stats like total QR scans, positive Google review clicks, and active staff performance.",
+    path: "/"
+  },
+  {
+    targetId: "tour-nav-config",
+    title: "🔑 Configuration & API Keys",
+    content: "Enter your Google Maps business links, customize your brand look/feel, add coupon rewards, and configure AI replies here.",
+    path: "/config"
+  },
+  {
+    targetId: "tour-nav-users",
+    title: "👥 Team & Staff Management",
+    content: "Invite and manage team members, assign business locations, and track which employee is generating the most reviews.",
+    path: "/users"
+  },
+  {
+    targetId: "tour-nav-enquiries",
+    title: "✉️ Customer Feedback & Enquiries",
+    content: "Read general customer queries and review private customer complaints intercepted by your smart feedback loop.",
+    path: "/enquiries"
+  },
+  {
+    targetId: "tour-health",
+    title: "🟢 Active System Monitoring",
+    content: "Monitor your server uptime and database sync status live. Everything is set up and ready to grow your business!",
+    path: "/"
+  }
+]
+
+const PlatformTour = ({ step, setStep }: { step: number | null, setStep: (s: number | null) => void }) => {
+  const navigate = useNavigate()
+  const location = useLocation()
+  const [coords, setCoords] = useState({ top: 0, left: 0 })
+
+  useEffect(() => {
+    if (step === null) return
+    const currentStep = tourSteps[step]
+    
+    // Automatically navigate to the correct page if we're not already on it
+    if (location.pathname !== currentStep.path) {
+      navigate(currentStep.path)
+    }
+  }, [step, location.pathname, navigate])
+
+  useEffect(() => {
+    if (step === null) return
+    const currentStep = tourSteps[step]
+
+    const updatePosition = () => {
+      const el = document.getElementById(currentStep.targetId)
+      if (el) {
+        const rect = el.getBoundingClientRect()
+        // Position popover to the right of the sidebar item
+        setCoords({
+          top: rect.top + window.scrollY,
+          left: rect.right + 20 + window.scrollX
+        })
+      }
+    }
+
+    updatePosition()
+    // Add small delay to ensure page transition and render is complete
+    const timer = setTimeout(updatePosition, 250)
+    window.addEventListener('resize', updatePosition)
+    return () => {
+      clearTimeout(timer)
+      window.removeEventListener('resize', updatePosition)
+    }
+  }, [step, location.pathname])
+
+  if (step === null) return null
+  const currentStep = tourSteps[step]
+
+  const handleNext = () => {
+    if (step === tourSteps.length - 1) {
+      localStorage.setItem('admin_tour_completed', 'true')
+      setStep(null)
+      toast.success("Welcome aboard! Your onboarding tour is complete. 🚀", {
+        icon: '🎉',
+        duration: 4000
+      })
+    } else {
+      setStep(step + 1)
+    }
+  }
+
+  const handlePrev = () => {
+    if (step > 0) setStep(step - 1)
+  }
+
+  return (
+    <>
+      {/* High-quality dimming backdrop focusing on the target element */}
+      <div className="fixed inset-0 z-40 bg-black/45 pointer-events-none transition-all duration-300 backdrop-blur-[1px]" />
+      
+      <div 
+        className="absolute z-50 w-80 bg-[#07070a]/90 backdrop-blur-md p-6 rounded-2xl border border-primary/30 shadow-[0_0_30px_rgba(224,26,79,0.15)] animate-in fade-in zoom-in-95 duration-200"
+        style={{ top: `${coords.top}px`, left: `${coords.left}px` }}
+      >
+        <div className="absolute -left-2 top-6 w-4 h-4 bg-[#07070a] border-l border-b border-primary/30 rotate-45" />
+        <div className="space-y-4">
+          <h4 className="font-black text-sm text-white tracking-tight flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-primary animate-ping" />
+            {currentStep.title}
+          </h4>
+          <p className="text-xs text-white/60 leading-relaxed font-medium">{currentStep.content}</p>
+          <div className="flex justify-between items-center pt-2 border-t border-white/5">
+            <span className="text-[9px] font-bold font-mono text-white/30 uppercase tracking-widest">Step {step + 1} of {tourSteps.length}</span>
+            <div className="flex gap-2">
+              <button onClick={() => setStep(null)} className="px-3 py-1.5 rounded hover:bg-white/5 text-[10px] font-bold text-white/30 hover:text-white transition-all mr-2">
+                Skip
+              </button>
+              {step > 0 && (
+                <button onClick={handlePrev} className="px-3 py-1.5 rounded bg-white/5 hover:bg-white/10 text-[10px] font-bold text-white transition-all">
+                  Back
+                </button>
+              )}
+              <button 
+                onClick={handleNext} 
+                className="px-3 py-1.5 rounded bg-primary hover:bg-primary/95 text-[10px] font-black text-white transition-all shadow-lg shadow-primary/20"
+              >
+                {step === tourSteps.length - 1 ? "Finish" : "Next"}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </>
+  )
+}
+
 function App() {
-
-
   const [isAuth, setIsAuth] = useState(!!localStorage.getItem('admin_token'))
+  const [tourStep, setTourStep] = useState<number | null>(null)
+
+  // Auto trigger the guided tour on first-time logins
+  useEffect(() => {
+    if (isAuth) {
+      const tourCompleted = localStorage.getItem('admin_tour_completed')
+      if (!tourCompleted) {
+        // Small delay to let the initial landing animations settle
+        const timer = setTimeout(() => setTourStep(0), 1000)
+        return () => clearTimeout(timer)
+      }
+    }
+  }, [isAuth])
 
   if (!isAuth) {
     return (
@@ -342,8 +506,6 @@ function App() {
             toast.promise(
               axios.post('/api/auth/login', { email, password }),
               {
-
-
                 loading: 'Authenticating...',
                 success: (res) => {
                   if (res.data.user.role === 'USER') throw new Error("Unauthorized")
@@ -366,17 +528,18 @@ function App() {
   }
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/admin">
       <div className="min-h-screen bg-[#020202] text-white flex">
         <Sidebar />
         <main className="flex-1 h-screen overflow-auto p-12">
           <Routes>
             <Route path="/" element={<Dashboard />} />
-            <Route path="/config" element={<Config />} />
+            <Route path="/config" element={<Config startTour={() => setTourStep(0)} />} />
             <Route path="/enquiries" element={<Enquiries />} />
             <Route path="/users" element={<UsersManagement />} />
           </Routes>
         </main>
+        <PlatformTour step={tourStep} setStep={setTourStep} />
         <Toaster position="bottom-right" />
       </div>
     </BrowserRouter>
